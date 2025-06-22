@@ -1,0 +1,76 @@
+//@version=6
+strategy("[bot2] RSI, MACD, EMA, SMA Point System v2", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10) //risk 10% of account equity
+
+
+//indicators
+rsiLength   = input.int(14, "RSI Length") //rsi of last 14 candle
+macdFast    = input.int(12, "MACD Fast Length") //ema of macd in last 12 candles (short term)
+macdSlow    = input.int(26, "MACD Slow Length") //ema of macd in last 26 candles (long term)
+macdSignal  = input.int(9, "MACD Signal Length") //ema of macd line
+smaFastLen  = input.int(50, "SMA Fast Length") //short term sma 50 candles
+smaSlowLen  = input.int(200, "SMA Slow Length") //long term sma 200 candles
+emaFastLen  = input.int(12, "EMA Fast Length") //short term ema
+emaSlowLen  = input.int(26, "EMA Slow Length") //long term ema (to find trend same as above)
+atrLength   = input.int(14, "ATR Length") // average ture range of past 14 candles to determine volatility
+baseRisk    = input.float(1.0, "Base % Risk", minval=0.1, step=0.1) //minimum risk of equity
+
+//points
+// rsi
+rsiVal = ta.rsi(close, rsiLength)
+rsiPoints = rsiVal >= 30 and rsiVal < 40 ? 3 : rsiVal >= 40 and rsiVal < 50 ? 1 : rsiVal > 70 and rsiVal <= 80 ? -1 :rsiVal > 80 ? -3 : 0
+
+// macd
+[macdLine, signalLine, _] = ta.macd(close, macdFast, macdSlow, macdSignal)
+macdPoints = ta.crossover(macdLine, signalLine) ? 3 : ta.crossunder(macdLine, signalLine) ? -3 : macdLine > signalLine ? 1 : macdLine < signalLine ? -1 : 0
+
+// sma
+smaFast = ta.sma(close, smaFastLen)
+smaSlow = ta.sma(close, smaSlowLen)
+smaPoints = (close > smaFast and smaFast > smaSlow) ? 3 : ta.crossover(close, smaFast) ? 1 : (close < smaFast and smaFast < smaSlow) ? -3 : ta.crossunder(close, smaFast) ? -1 : 0
+
+// ema
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+emaPoints = (close > emaFast and emaFast > emaSlow) ? 3 : ta.crossover(emaFast, emaSlow) ? 1 : (close < emaFast and emaFast < emaSlow) ? -3 : ta.crossunder(emaFast, emaSlow) ? -1 : 0
+
+//total point calc
+totalPoints = rsiPoints + macdPoints + smaPoints + emaPoints
+
+//fetching atr
+atr = ta.atr(atrLength)
+
+//dynamic scaling and risk to rward
+maxPoints = 12.0 
+certainty = math.abs(totalPoints) / maxPoints 
+riskMultiplier = certainty * baseRisk
+rrRatio = certainty < 0.3 ? 1.2 : certainty < 0.6 ? 1.5 : 2.0
+
+//stop loss and take profit 
+stopLoss = atr * 1.5
+takeProfit = stopLoss * rrRatio
+
+//signals
+longEntry  = (totalPoints >= 6 and strategy.position_size <= 0)
+shortEntry = (totalPoints <= -6 and strategy.position_size >= 0)
+exitLong   = totalPoints < 2 and strategy.position_size > 0
+exitShort  = totalPoints > -2 and strategy.position_size < 0
+
+
+if longEntry //buy
+    longQty = (strategy.equity * riskMultiplier) / close //quantity of doge bought
+    strategy.entry("Long", strategy.long, qty=longQty) //entry 
+    strategy.exit("TP/SL Long", from_entry="Long",
+         stop=close - stopLoss,
+         limit=close + takeProfit) //exit conditions
+
+//if shortEntry
+    shortQty = (strategy.equity * riskMultiplier) / close
+    strategy.entry("Short", strategy.short, qty=shortQty)
+    strategy.exit("TP/SL Short", from_entry="Short",
+         stop=close + stopLoss,
+         limit=close - takeProfit)
+
+if exitLong
+    strategy.close("Long") //exit
+if exitShort
+    strategy.close("Short")
