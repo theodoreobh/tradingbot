@@ -1,6 +1,7 @@
 //@version=6
 strategy("[bot1] Bollinger-Bands Strat v5", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100) //default qty means the bot will be extreme compared to v4 buying 100% of original balance everytrade 
-
+//BTC USD
+//1 day candles
 
 length = 20 // how many candles analyzed/timeframe
 src = close // use closing price as indication
