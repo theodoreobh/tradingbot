@@ -1,0 +1,49 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rogermoore999734
+ //BTC USD
+//1min candles
+
+//@version=6
+strategy("[bot1] Bollinger-Bands Strat", overlay=true)
+
+length = 20  // how many candles analyzed/timeframe
+src = close  // use closing price as indication
+mult = 2.0   // coefficient for band size
+basis = ta.sma(src, length)
+dev = mult * ta.stdev(src, length) //derivation x coefficicient do determine amplitude of the band
+upper = basis + dev //creating bands
+lower = basis - dev
+
+// entry conditions == when price crosses the bands
+buySignal = ta.crossover(src, lower)
+sellSignal = ta.crossunder(src, upper)
+
+var float longEntryPrice = na
+var float shortEntryPrice = na
+
+if strategy.position_size == 0
+    longEntryPrice := na
+    shortEntryPrice := na
+
+if buySignal
+    longEntryPrice := close
+    strategy.entry("Long", strategy.long) //buy
+
+if sellSignal
+    shortEntryPrice := close
+    strategy.entry("Short", strategy.short) //sell
+
+stopLossBars = 10 //fetching last 10 candles/minutes
+rewardRatio = 3.0
+
+if not na(longEntryPrice)
+    longStopLoss = ta.lowest(low, stopLossBars) //lowest low in last 10 candles
+    longRisk = longEntryPrice - longStopLoss //risk se 
+    longTakeProfit = longEntryPrice + longRisk * rewardRatio //x3 for 3:1 risk reward se
+    strategy.exit("Long Exit", "Long", stop=longStopLoss, limit=longTakeProfit) // exit when it crosses either the stop loss or the take profit
+
+if not na(shortEntryPrice) //same as above but for short trade, so everythign reversed
+    shortStopLoss = ta.highest(high, stopLossBars)
+    shortRisk = shortStopLoss - shortEntryPrice
+    shortTakeProfit = shortEntryPrice - shortRisk * rewardRatio
+    strategy.exit("Short Exit", "Short", stop=shortStopLoss, limit=shortTakeProfit)
