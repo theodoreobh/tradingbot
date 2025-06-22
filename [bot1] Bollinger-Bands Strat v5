@@ -1,3 +1,6 @@
+/ This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rogermoore999734
+
 //@version=6
 strategy("[bot1] Bollinger-Bands Strat v5", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100) //default qty means the bot will be extreme compared to v4 buying 100% of original balance everytrade 
 //BTC USD
