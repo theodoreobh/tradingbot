@@ -15,7 +15,7 @@ upper = basis + dev //creating bands
 lower = basis - dev
 
 //fetching rsi and ema
-rsi = ta.rsi(close, 14)
+rsi = ta.rsi(close, 14) //useless in this v6
 ema50 = ta.ema(close, 50)
 
 //trend confirmation
