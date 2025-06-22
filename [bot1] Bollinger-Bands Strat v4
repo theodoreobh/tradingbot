@@ -1,0 +1,64 @@
+/ This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rogermoore999734
+//BTC US
+//4h Candles
+
+//@version=6
+strategy("[bot1] Bollinger-Bands Strat v4", overlay=true)
+
+length = 20  // how many candles analyzed/timeframe
+src = close  // use closing price as indication
+stdev = ta.stdev(src, length) //standard derivation
+atr = ta.atr(14) // fetching atr of last 14 candles
+volatilityFactor = atr / ta.sma(atr, 50) //how volatile btc is compared to the sma 
+mult = 1.5 + 0.5 * volatilityFactor  //adaptive bands
+
+basis = ta.sma(src, length) //fethcing standard moving average
+dev = mult * stdev  // coefficient for band size
+upper = basis + dev //creating bands
+lower = basis - dev
+
+//fetching rsi and ema
+rsi = ta.rsi(close, 14)
+ema50 = ta.ema(close, 50)
+
+//trend confirmation/filter
+longOK = (close > ema50) and (rsi < 50)
+shortOK = (close < ema50) and (rsi > 60)
+
+
+// buy or sell when exceeding channel band (indicates a reversal)
+buySignal = ta.crossover(src, lower) 
+sellSignal = ta.crossunder(src, upper) 
+
+
+var float longEntryPrice = na
+var float shortEntryPrice = na
+
+if strategy.position_size == 0
+    longEntryPrice := na
+    shortEntryPrice := na
+
+if buySignal and longOK
+    longEntryPrice := close
+    strategy.entry("Long", strategy.long) //buy
+
+if sellSignal and shortOK
+    shortEntryPrice := close
+    strategy.entry("Short", strategy.short) //short
+
+//trailing stop loss
+stopLossBars = 10 
+rewardRatio = 3.0
+
+if not na(longEntryPrice)
+    longStopLoss = ta.lowest(low, stopLossBars)  //lowest low in last 10 candles
+    longRisk = longEntryPrice - longStopLoss //risk rweard
+    trailOffset = longRisk * rewardRatio //distance from trailling stop loss to price
+    strategy.exit("Long Exit", "Long", stop=longStopLoss, trail_offset=trailOffset, trail_points=trailOffset) //exit
+
+if not na(shortEntryPrice) ////same as above but for short trade, so everythign reversed
+    shortStopLoss = ta.highest(high, stopLossBars)
+    shortRisk = shortStopLoss - shortEntryPrice
+    trailOffset = shortRisk * rewardRatio
+    strategy.exit("Short Exit", "Short", stop=shortStopLoss, trail_offset=trailOffset, trail_points=trailOffset)
