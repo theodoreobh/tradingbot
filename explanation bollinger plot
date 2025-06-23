@@ -1,0 +1,21 @@
+//@version=6
+indicator("Bollinger Bands", overlay=true)
+
+// === Inputs ===
+length = input.int(20, title="Length")
+src    = input.source(close, title="Source")
+mult   = input.float(2.0, title="StdDev Multiplier")
+
+// === Calculations ===
+basis = ta.sma(src, length)
+stdev = ta.stdev(src, length)
+upper = basis + mult * stdev
+lower = basis - mult * stdev
+
+// === Plots ===
+pBasis = plot(basis, color=color.orange, title="Middle Band")
+pUpper = plot(upper, color=color.green, title="Upper Band")
+pLower = plot(lower, color=color.red, title="Lower Band")
+
+// === Fill between bands ===
+fill(pUpper, pLower, color=color.new(color.blue, 85), title="Band Fill")
